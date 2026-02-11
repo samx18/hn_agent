@@ -1,0 +1,7 @@
+
+# macOS
+.DS_Store
+
+# Other ignores
+.claude
+BUILD_SUMMARY.md
