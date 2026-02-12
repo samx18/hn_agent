@@ -7,10 +7,23 @@ and creates a summary digest using the Strands Agents framework.
 """
 
 from datetime import datetime
+import os
+import re
 import httpx
 from bs4 import BeautifulSoup
 from strands import Agent, tool
 from strands.models import BedrockModel
+
+# Output directory for digest and summary files
+OUTPUT_DIR = "/Users/sam/samx18/00_Inbox/"
+
+
+def sanitize_filename(title: str) -> str:
+    """Convert article title to a safe filename."""
+    # Remove/replace unsafe characters
+    safe = re.sub(r'[^\w\s-]', '', title)
+    safe = re.sub(r'\s+', '_', safe)
+    return safe[:50]  # Limit length
 
 
 @tool
@@ -143,6 +156,8 @@ def main():
     print("=" * 60)
     print()
 
+    date_str = datetime.now().strftime("%Y-%m-%d")
+
     # Fetch HN front page articles
     print("Fetching Hacker News front page...")
     articles = fetch_hn_front_page()
@@ -185,6 +200,19 @@ Use the fetch_webpage tool to get the article content, then provide a brief summ
             print(f"   ✗ Skipped: {str(e)[:50]}")
             continue
 
+    # Save all summaries to a single file
+    summaries_filename = os.path.join(OUTPUT_DIR, f"hn_stories_{date_str}.md")
+    with open(summaries_filename, "w") as f:
+        f.write(f"# Hacker News Stories - {date_str}\n\n")
+        for idx, s in enumerate(summaries, 1):
+            f.write(f"# {s['title']}\n\n")
+            f.write(f"**URL:** {s['url']}\n\n")
+            f.write(f"**Points:** {s['points']} | **Comments:** {s['comments']}\n\n")
+            f.write("## Summary\n\n")
+            f.write(s['summary'])
+            f.write("\n\n---\n\n")
+    print(f"\n✓ Stories saved to: {summaries_filename}")
+
     # Generate the final digest
     print("\n" + "=" * 60)
     print("GENERATING FINAL DIGEST")
@@ -221,8 +249,7 @@ Format it nicely for reading."""
     final_digest = str(digest_agent(digest_prompt))
 
     # Save digest to markdown file
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    filename = f"hn_digest_{date_str}.md"
+    filename = os.path.join(OUTPUT_DIR, f"hn_digest_{date_str}.md")
 
     with open(filename, "w") as f:
         f.write(f"# Hacker News Digest - {date_str}\n\n")
